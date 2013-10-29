@@ -4,16 +4,53 @@
 var events = require('events');
 var iceStreamerModule = require('./icestreamer');
 var util = require('util');
+var dgram = require('dgram');
 
-var BroadcastPlayer = function() {
+var BroadcastPlayer = function(broadcastIP, broadcastPort) {
+    this.currentChannelUrl = '';
+    this.currentChannelId = 0;
+    this.broadcastIP = broadcastIP;
+    this.broadcastPort = broadcastPort;
+    this.iceStreamer = new iceStreamerModule.IceStreamer();
+    var self = this;
+    this.iceStreamer.on("trackInfo", function(data) {
+        self.onTrackInfo(data);
+    });
+    this.iceStreamer.on("streamClosed", function(data) {
+        self.onStreamClosed(data);
+    });
+    this.iceStreamer.on("streamReady", function(data) {
+        self.onStreamReady(data);
+    });
+    this.deviceMap = {};
+    this.artistInfo = '';
+    this.trackInfo = 'AirHome';
 
+    var dataServer = dgram.createSocket("udp4");
+
+    dataServer.bind(broadcastPort, '0.0.0.0', function() {
+        dataServer.setBroadcast(true);
+        dataServer.setMulticastTTL(128);
+        dataServer.setMulticastLoopback(true);
+        dataServer.addMembership(broadcastIP);
+
+        // readRadio();
+    });
+
+    this.dataServer = dataServer;
 };
+
+
 
 module.exports.BroadcastPlayer = BroadcastPlayer;
 
 util.inherits(BroadcastPlayer, events.EventEmitter);
 
 BroadcastPlayer.prototype.setChannelUrl = function(channelId, channelUrl, stationName) {
+    console.log('playing URL ' + channelUrl + ' and storing id ' + channelId);
+    this.currentChannelId = channelId;
+    this.currentChannelUrl = channelUrl;
+    this.iceStreamer.playUrl(channelUrl, stationName);
 };
 
 BroadcastPlayer.prototype.getChannelId = function() {
@@ -79,6 +116,11 @@ BroadcastPlayer.prototype.onTrackInfo = function(data) {
 BroadcastPlayer.prototype.onStreamReady = function(data) {
     console.log('received stream ready, playing stream now');
     var source = data.source;
+    var self = this;
+    source.on("data", function(data) {
+        // console.log('received data to transmit :-)');
+        self.dataServer.send(data, 0, data.length, self.broadcastPort, self.broadcastIP);
+    });
     // source.pipe(airtunes);
 };
 

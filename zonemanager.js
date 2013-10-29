@@ -3,7 +3,7 @@ var broadcastModule = require('./broadcast_player.js');
 
 
 var ZoneManager = function() {
-	this.zoneMap = { zoneA: new broadcastModule.BroadcastPlayer() };
+	this.zoneMap = { zoneA: new broadcastModule.BroadcastPlayer('230.185.192.108', 10101) };
 	this.deviceMap = {};
 	var self = this;
 	for (var key in this.zoneMap) {

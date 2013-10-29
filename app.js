@@ -151,4 +151,14 @@ function socketError(err) {
 	// Handle error, and 'end' event will be emitted after this as well
 	console.log( err );
 	updateSockets( err );
-}	
+}
+
+var controlIO = require('socket.io').listen(4666);
+controlIO.sockets.on('connection', function(socket) {
+    socket.on('welcome', function(data) {
+        console.log('[CONTROL] received welcome from ' + data.name);
+        zoneManager.setZoneChannelUrl('zoneA', 1, 'http://edge.live.mp3.mdn.newmedia.nacamar.net/ps-egofm_128/livestream.mp3', 'Edge');
+        socket.emit('listen_on', '230.185.192.108');
+    });
+});
+
