@@ -34,10 +34,14 @@
 	  var speakerId = 'speaker' + speaker.id;
 	  var checkedValue = speaker.selected != undefined ? ' checked="checked"' : '';
 	  var volumeDisabled = speaker.selected != undefined ? '' : ' style="display: none"';
+      var latencyDisabled = speaker.selected != undefined ? '' : ' style="display: none"';
       speakerList += '<input type="checkbox" id="' + speakerId + '" name="' + speakerId + '" data="' + speaker.id + '" value="true" class="speakerButton"' + checkedValue + '>';
       speakerList += '<label for="' + speakerId + '">' + speaker.title + '</label>';
       speakerList += '<div data-role="fieldcontain" id="' + speakerId + 'Volume"' + volumeDisabled + '>';
       speakerList += '<input type="range" id="' + speakerId + 'Volume-range" value="' + speaker.volume + '" min="0" max="100" step="1" class="speakerVolume" data="' + speaker.id + '">';
+      speakerList += '</div>';
+      speakerList += '<div data-role="fieldcontain" id="' + speakerId + 'Latency"' + latencyDisabled + '>';
+      speakerList += '<input type="range" id="' + speakerId + 'Latency-range" value="' + speaker.latency + '" min="0" max="2500" step="5" class="speakerLatency" data="' + speaker.id + '">';
       speakerList += '</div>';
     });
 	
@@ -59,11 +63,14 @@
           selected = true;
         }
         var volume = $('#speaker' + id + 'Volume-range').attr("value");
+        var latency = $('#speaker' + id + 'Latency-range').attr("value");
 		socket.emit('speakerChange', { id: id, selected: selected, volume: volume });
 		if (selected) {
 			$('#speaker' + id + 'Volume').show();
+            $('#speaker' + id + 'Latency').show();
 		} else {
 			$('#speaker' + id + 'Volume').hide();
+            $('#speaker' + id + 'Latency').hide();
 		}
     });
     $('.speakerVolume').slider();
@@ -71,6 +78,12 @@
     	var volume = $(this).val();
     	var id = $(this).attr("data");
     	socket.emit('volumeChange', { id: id, volume: volume });
+    });
+    $('.speakerLatency').slider();
+    $('.speakerLatency').bind("change", function(event) {
+        var latency = $(this).val();
+        var id = $(this).attr("data");
+        socket.emit('latencyChange', { "id": id, "latency": latency });
     });
   }
 

@@ -14,7 +14,7 @@ var express = require('express')
       user : 'airhome',
       password : 'airhome',
       database : 'airhome',
-      socketPath: '/var/run/mysqld/mysqld.sock'
+//      socketPath: '/var/run/mysqld/mysqld.sock'
   })
   , POLLING_INTERVAL = 3000
   , pollingTimer
@@ -44,6 +44,10 @@ if ('development' == app.get('env')) {
 
 app.get('/', routes.index);
 
+var connectedSpeakerMap = {};
+var connectedSocketMap = {};
+var connectedSpeakerCounter = 0;
+
 var server = http.createServer(app);
 var io = require('socket.io').listen(server);
 server.listen(app.get('port'), function(){
@@ -70,7 +74,7 @@ io.sockets.on( 'connection', function ( socket ) {
 	socket.on("speakerChange", function(data) {
 		console.log("speaker " + data.id + " changed to " + data.selected + " and volume " + data.volume);
 		if (data.selected) {
-			zoneManager.addHost('zoneA', data.id, speakerIpMap[data.id]);
+			zoneManager.addHost('zoneA', data.id, speakerIpMap[data.id], connectedSocketMap[data.id]);
 		} else {
 			zoneManager.delHost(data.id);
 		}
@@ -79,6 +83,10 @@ io.sockets.on( 'connection', function ( socket ) {
 		console.log("volume change for " + data.id + " with volume " + data.volume);
 		zoneManager.setVolume(data.id, data.volume);
 	});
+    socket.on("latencyChange", function(data) {
+        console.log("latency change for " + data.id + " with latency " + data.latency);
+        zoneManager.setLatency(data.id, data.latency);
+    });
 	socket.on("channelChange", function(data) {
 		console.log("channel " + data.id + " set.");
 		var channelData = channelMap[data.id];
@@ -101,7 +109,6 @@ var updateSockets = function ( data ) {
 var pollingLoop = function () {
 	// Doing the database query
 	var channelQuery = connection.query('SELECT id, title, url FROM channels ORDER BY order_number ASC');
-	var speakerQuery = connection.query('SELECT id, title, ip FROM speakers ORDER BY order_number ASC');
 	var channels = [], speakers = []; // this array will contain the result of our db query
 	var channelDone = false, speakerDone = false;
 	// setting the query listeners
@@ -115,28 +122,19 @@ var pollingLoop = function () {
 		channel.selected = channel.id == zoneManager.getZoneChannelId('zoneA');
 		channels.push( channel );
 	}).on('end', function() {
-		channelDone = true;
-		if (speakerDone === true) {
-			updateClientStatus(channels, speakers);
-		}
+        for (var speakerIP in connectedSpeakerMap) {
+            var speakerElement = connectedSpeakerMap[speakerIP];
+            if (zoneManager.getZoneId(speakerElement.id) == 'zoneA') {
+                speakerElement.selected = true;
+            } else {
+                speakerElement.selected = undefined;
+            }
+            speakerElement.volume = zoneManager.getVolume(speakerElement.id);
+            speakerElement.latency = zoneManager.getLatency(speakerElement.id);
+            speakers.push(speakerElement);
+        }
+		updateClientStatus(channels, speakers);
 	});
-	speakerQuery.on('error', socketError).on('result', function( speaker ) {
-		speakerIpMap[speaker.id] = speaker.ip;
-		console.log('for id ' + speaker.id + ' volume ' + zoneManager.getVolume(speaker.id));
-		speaker.volume = zoneManager.getVolume(speaker.id);
-		if (zoneManager.getZoneId(speaker.id) == 'zoneA') {
-			speaker.selected = true;
-		} else {
-			speaker.selected = undefined;
-		}
-		speakers.push( speaker );
-	}).on('end', function() {
-		speakerDone = true;
-		if (channelDone === true) {
-			updateClientStatus(channels, speakers);
-		}
-	});
-
 };
 
 function updateClientStatus(channels, speakers) {
@@ -155,10 +153,29 @@ function socketError(err) {
 
 var controlIO = require('socket.io').listen(4666);
 controlIO.sockets.on('connection', function(socket) {
+    var clientAddress = socket.handshake.address;
+    var clientIP = clientAddress.address;
     socket.on('welcome', function(data) {
-        console.log('[CONTROL] received welcome from ' + data.name);
-        zoneManager.setZoneChannelUrl('zoneA', 1, 'http://edge.live.mp3.mdn.newmedia.nacamar.net/ps-egofm_128/livestream.mp3', 'Edge');
-        socket.emit('listen_on', '230.185.192.108');
+        console.log('[CONTROL] received welcome from ' + data.name + ' ' + clientAddress.address);
+        var speakerId = connectedSpeakerCounter++;
+        connectedSpeakerMap[speakerId] = {
+            "title": data.name,
+            "ip": clientAddress.ip,
+            "volume": 0,
+            "zone": null,
+            "order_number": speakerId,
+            "id": speakerId,
+            "selected": undefined
+        };
+        connectedSocketMap[speakerId] = socket;
+//        zoneManager.setZoneChannelUrl('zoneA', 1, 'http://edge.live.mp3.mdn.newmedia.nacamar.net/ps-egofm_128/livestream.mp3', 'Edge');
+//        socket.emit('listen_on', '230.185.192.108');
+    });
+    socket.on('error', function(data) {
+        connectedSpeakerMap[clientIP] = null;
+    });
+    socket.on('disconnect', function(data) {
+        connectedSpeakerMap[clientIP] = null;
     });
 });
 

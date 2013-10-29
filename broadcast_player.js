@@ -61,13 +61,20 @@ BroadcastPlayer.prototype.getChannelUrl = function() {
     return this.currentChannelUrl;
 };
 
-BroadcastPlayer.prototype.addDevice = function(deviceId, deviceIp) {
+BroadcastPlayer.prototype.addDevice = function(deviceId, deviceIp, socket) {
     console.log('adding device ' + deviceIp);
     if (this.deviceMap[deviceIp] != null) {
         return null;
     }
-    var newDevice = {}; // airtunes.add(deviceIp, 5000);
+    var newDevice = {
+        "id": deviceId,
+        "ip": deviceIp,
+        "socket": socket,
+        "volume": 0,
+        "latency": 1000
+    };
     var self = this;
+    socket.emit('listen_on', this.broadcastIP);
     /*
     newDevice.on('status', function(status) {
         console.log('status: ' + status);
@@ -90,7 +97,7 @@ BroadcastPlayer.prototype.delDevice = function(deviceIp) {
     if (device == null) {
         return false;
     }
-    // device.stop();
+    device.socket.emit('listen_off', this.broadcastIP);
     this.deviceMap[deviceIp] = null;
     return true;
 };
@@ -100,11 +107,16 @@ BroadcastPlayer.prototype.setVolume = function(deviceIp, volume) {
     if (device == null) {
         return false;
     }
-    /*
-    device.setVolume(volume, function() {
-        console.log('setting volume on ' + deviceIp + ' to ' + volume);
-    });
-    */
+    device.socket.emit('set_volume', volume);
+    device.volume = volume;
+};
+
+BroadcastPlayer.prototype.setLatency = function(deviceIp, latency) {
+    var device = this.deviceMap[deviceIp];
+    if (device == null) {
+        return false;
+    }
+    device.socket.emit('set_latency', latency);
 };
 
 BroadcastPlayer.prototype.onTrackInfo = function(data) {

@@ -25,7 +25,7 @@ ZoneManager.prototype.getZones = function() {
 	return [ 'zoneA' ];
 };
 
-ZoneManager.prototype.addHost = function(zoneId, newDeviceId, ip) {
+ZoneManager.prototype.addHost = function(zoneId, newDeviceId, ip, socket) {
 	var newZone = this.zoneMap[zoneId];
 	if (newZone == null) {
 		return null;
@@ -41,7 +41,7 @@ ZoneManager.prototype.addHost = function(zoneId, newDeviceId, ip) {
 		this.deviceMap[ip] = null;
 	}
 	
-	var newDevice = newZone.addDevice(newDeviceId, ip);
+	var newDevice = newZone.addDevice(newDeviceId, ip, socket);
 	var deviceData = {
 			zoneDevice: newDevice,
 			zonePlayer: newZone,
@@ -80,6 +80,25 @@ ZoneManager.prototype.getVolume = function(deviceId) {
 	}
 	
 	return device.volume;
+};
+
+ZoneManager.prototype.setLatency = function(deviceId,latency) {
+    var device = this.deviceMap[deviceId];
+    if (device == null) {
+        return false;
+    }
+    device.zonePlayer.setLatency(device.zoneDevice, latency);
+    device.latency = latency;
+    return true;
+};
+
+ZoneManager.prototype.getLatency = function(deviceId) {
+    var device = this.deviceMap[deviceId];
+    if (device == null) {
+        return 0;
+    }
+
+    return device.latency;
 };
 
 ZoneManager.prototype.getZoneId = function(deviceId) {
