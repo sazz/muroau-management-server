@@ -14,7 +14,7 @@ var express = require('express')
       user : 'airhome',
       password : 'airhome',
       database : 'airhome',
-//      socketPath: '/var/run/mysqld/mysqld.sock'
+      socketPath: '/var/run/mysqld/mysqld.sock'
   })
   , POLLING_INTERVAL = 3000
   , pollingTimer
@@ -124,14 +124,16 @@ var pollingLoop = function () {
 	}).on('end', function() {
         for (var speakerIP in connectedSpeakerMap) {
             var speakerElement = connectedSpeakerMap[speakerIP];
-            if (zoneManager.getZoneId(speakerElement.id) == 'zoneA') {
-                speakerElement.selected = true;
-            } else {
-                speakerElement.selected = undefined;
+            if (speakerElement != null) {
+                if (zoneManager.getZoneId(speakerElement.id) == 'zoneA') {
+                    speakerElement.selected = true;
+                } else {
+                    speakerElement.selected = undefined;
+                }
+                speakerElement.volume = zoneManager.getVolume(speakerElement.id);
+                speakerElement.latency = zoneManager.getLatency(speakerElement.id);
+                speakers.push(speakerElement);
             }
-            speakerElement.volume = zoneManager.getVolume(speakerElement.id);
-            speakerElement.latency = zoneManager.getLatency(speakerElement.id);
-            speakers.push(speakerElement);
         }
 		updateClientStatus(channels, speakers);
 	});
@@ -168,14 +170,11 @@ controlIO.sockets.on('connection', function(socket) {
             "selected": undefined
         };
         connectedSocketMap[speakerId] = socket;
-//        zoneManager.setZoneChannelUrl('zoneA', 1, 'http://edge.live.mp3.mdn.newmedia.nacamar.net/ps-egofm_128/livestream.mp3', 'Edge');
-//        socket.emit('listen_on', '230.185.192.108');
-    });
-    socket.on('error', function(data) {
-        connectedSpeakerMap[clientIP] = null;
-    });
-    socket.on('disconnect', function(data) {
-        connectedSpeakerMap[clientIP] = null;
+        socket.set("close timeout", 10);
+        socket.on('disconnect', function() {
+            console.log("[CONTROL] received disconnect");
+            connectedSpeakerMap[speakerId] = undefined;
+        });
     });
 });
 
