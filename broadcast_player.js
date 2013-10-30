@@ -118,7 +118,11 @@ BroadcastPlayer.prototype.setVolume = function(deviceIp, volume) {
     if (device == null) {
         return false;
     }
-    device.socket.emit('set_volume', volume);
+    device.socket.emit('set_volume', {
+        client: deviceIp,
+        volume: volume,
+        clientToken: device.clientToken
+    });
     device.volume = volume;
 };
 
@@ -127,7 +131,11 @@ BroadcastPlayer.prototype.setLatency = function(deviceIp, latency) {
     if (device == null) {
         return false;
     }
-    device.socket.emit('set_latency', latency);
+    device.socket.emit('set_latency', {
+        client: deviceIp,
+        latency: latency,
+        clientToken: device.clientToken
+    });
 };
 
 BroadcastPlayer.prototype.onTrackInfo = function(data) {

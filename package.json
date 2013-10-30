@@ -11,6 +11,7 @@
     "lame": "*",
     "socket.io": "*",
     "mysql": "*",
-    "icecast": "*"
+    "icecast": "*",
+    "socket-ntp": "*"
   }
 }

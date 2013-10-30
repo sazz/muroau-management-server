@@ -156,8 +156,10 @@ function socketError(err) {
 	updateSockets( err );
 }
 
+var ntp = require('socket-ntp');
 var controlIO = require('socket.io').listen(4666);
 controlIO.sockets.on('connection', function(socket) {
+    ntp.sync(socket);
     var clientAddress = socket.handshake.address;
     var clientIP = clientAddress.address;
     socket.on('welcome', function(data) {
