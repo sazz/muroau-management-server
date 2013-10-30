@@ -50,20 +50,22 @@ var connectedSpeakerCounter = 0;
 
 var server = http.createServer(app);
 var io = require('socket.io').listen(server);
+io.set('log level', 0);
 server.listen(app.get('port'), function(){
   console.log('Express server listening on port ' + app.get('port'));
 });
 
 
+
 //creating a new websocket to keep the content updated without any AJAX request
 io.sockets.on( 'connection', function ( socket ) {
-
+    socket.set('log level', 0);
 	console.log('Number of connections:' + connectionsArray.length);
 	// starting the loop only if at least there is one user connected
 	if (!connectionsArray.length) {
 		pollingLoop();
 	}
-
+//    socket.set('log level', 0);
 	socket.on('disconnect', function () {
 		var socketIndex = connectionsArray.indexOf( socket );
 		console.log('socket = ' + socketIndex + ' disconnected');
@@ -73,8 +75,9 @@ io.sockets.on( 'connection', function ( socket ) {
 	});
 	socket.on("speakerChange", function(data) {
 		console.log("speaker " + data.id + " changed to " + data.selected + " and volume " + data.volume);
-		if (data.selected) {
-			zoneManager.addHost('zoneA', data.id, speakerIpMap[data.id], connectedSocketMap[data.id]);
+        var speakerData = connectedSpeakerMap[data.id];
+		if (data.selected && speakerData != undefined) {
+			zoneManager.addHost('zoneA', data.id, speakerData.ip, connectedSocketMap[data.id], speakerData.clientToken);
 		} else {
 			zoneManager.delHost(data.id);
 		}
@@ -158,15 +161,16 @@ controlIO.sockets.on('connection', function(socket) {
     var clientAddress = socket.handshake.address;
     var clientIP = clientAddress.address;
     socket.on('welcome', function(data) {
-        console.log('[CONTROL] received welcome from ' + data.name + ' ' + clientAddress.address);
+        console.log('[CONTROL] received welcome from ' + data.name + ' ' + clientAddress.address + ' ' + socket.id);
         var speakerId = connectedSpeakerCounter++;
         connectedSpeakerMap[speakerId] = {
             "title": data.name,
-            "ip": clientAddress.ip,
+            "ip": clientIP,
             "volume": 0,
             "zone": null,
             "order_number": speakerId,
             "id": speakerId,
+            "clientToken": data.clientToken,
             "selected": undefined
         };
         connectedSocketMap[speakerId] = socket;

@@ -61,7 +61,7 @@ BroadcastPlayer.prototype.getChannelUrl = function() {
     return this.currentChannelUrl;
 };
 
-BroadcastPlayer.prototype.addDevice = function(deviceId, deviceIp, socket) {
+BroadcastPlayer.prototype.addDevice = function(deviceId, deviceIp, socket, clientToken) {
     console.log('adding device ' + deviceIp);
     if (this.deviceMap[deviceIp] != null) {
         return null;
@@ -71,10 +71,16 @@ BroadcastPlayer.prototype.addDevice = function(deviceId, deviceIp, socket) {
         "ip": deviceIp,
         "socket": socket,
         "volume": 0,
-        "latency": 1000
+        "latency": 1000,
+        "clientToken": clientToken
     };
     var self = this;
-    socket.emit('listen_on', this.broadcastIP);
+    socket.emit('listen_on', {
+        client: deviceIp,
+        broadcast: this.broadcastIP,
+        clientToken: newDevice.clientToken
+    });
+    console.log('[BROADCAST] setting listen on for ' + socket.id + ' to ' + deviceIp);
     /*
     newDevice.on('status', function(status) {
         console.log('status: ' + status);
@@ -97,7 +103,12 @@ BroadcastPlayer.prototype.delDevice = function(deviceIp) {
     if (device == null) {
         return false;
     }
-    device.socket.emit('listen_off', this.broadcastIP);
+    console.log('[BROADCAST] sending listen off for ' + device.socket.id + ' to ' + deviceIp + ' ' + device.socket);
+    device.socket.emit('listen_off', {
+        client: deviceIp,
+        broadcast: this.broadcastIP,
+        clientToken: device.clientToken
+    });
     this.deviceMap[deviceIp] = null;
     return true;
 };
