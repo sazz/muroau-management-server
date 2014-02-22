@@ -13,8 +13,8 @@ var express = require('express')
   , connection	= mysql.createConnection({
       user : 'airhome',
       password : 'airhome',
-      database : 'airhome',
-      socketPath: '/var/run/mysqld/mysqld.sock'
+      database : 'airhome'
+      // socketPath: '/var/run/mysqld/mysqld.sock'
   })
   , POLLING_INTERVAL = 3000
   , pollingTimer

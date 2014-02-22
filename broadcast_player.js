@@ -149,7 +149,7 @@ BroadcastPlayer.prototype.onStreamReady = function(data) {
     var source = data.source;
     var self = this;
     source.on("data", function(data) {
-        // console.log('received data to transmit :-)');
+//        console.log('received data to transmit :-)');
         self.dataServer.send(data, 0, data.length, self.broadcastPort, self.broadcastIP);
     });
     // source.pipe(airtunes);
